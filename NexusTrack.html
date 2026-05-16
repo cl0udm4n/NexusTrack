@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusTrack | Your Ultimate Media Hub</title>
+    <meta name="description"
+        content="Track your favorite movies, TV shows, and anime with NexusTrack. Personalized watchlist, detailed stats, and seamless integration with TMDB and Jikan APIs.">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&family=Spline+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+    <!-- Tailwind for rapid layout, but custom CSS for premium look -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#edb1ff',
+                        secondary: '#ffb3b0',
+                        tertiary: '#edc157',
+                        background: '#111125',
+                        surface: '#1e1e32',
+                        'surface-high': '#28283d',
+                        accent: '#9d50bb',
+                        'accent-orange': '#ff7f50',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        outfit: ['Outfit', 'sans-serif'],
+                        spline: ['Spline Sans', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --glass-bg: rgba(30, 30, 50, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            background-color: #111125;
+            color: #e2e0fc;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+            scrollbar-width: thin;
+            scrollbar-color: #9d50bb #111125;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #111125;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #3e3e5e;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9d50bb;
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .hero-gradient {
+            background: linear-gradient(to bottom, transparent, #111125);
+        }
+
+        .text-gradient {
+            background: linear-gradient(135deg, #9d50bb 0%, #ff7f50 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .card-hover {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .card-hover:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(157, 80, 187, 0.2);
+            border-color: rgba(157, 80, 187, 0.4);
+        }
+
+        .nav-link {
+            position: relative;
+            transition: color 0.3s ease;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #9d50bb, #ff7f50);
+            transition: width 0.3s ease;
+        }
+
+        .nav-link:hover::after,
+        .nav-link.active::after {
+            width: 100%;
+        }
+
+        .primary-btn {
+            background: linear-gradient(135deg, #9d50bb 0%, #6e48aa 100%);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .primary-btn:hover {
+            box-shadow: 0 0 20px rgba(157, 80, 187, 0.5);
+            transform: scale(1.05);
+        }
+
+        .primary-btn:active {
+            transform: scale(0.95);
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, #1e1e32 25%, #28283d 50%, #1e1e32 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+
+        @keyframes loading {
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .status-airing {
+            background-color: #10b981;
+            box-shadow: 0 0 8px #10b981;
+        }
+
+        .status-finished {
+            background-color: #6b7280;
+        }
+
+        .status-upcoming {
+            background-color: #f59e0b;
+            box-shadow: 0 0 8px #f59e0b;
+        }
+
+        #toastContainer {
+            pointer-events: none;
+        }
+
+        .toast {
+            pointer-events: auto;
+            animation: slideIn 0.3s ease-out forwards;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 640px) {
+            .hero-title {
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body class="min-h-screen">
+
+    <!-- Header -->
+    <header class="fixed top-0 left-0 right-0 z-50 glass-card border-b border-white/10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-8">
+                    <a href="#" class="flex items-center gap-2 group" onclick="switchTab('home')">
+                        <span
+                            class="text-2xl font-black font-outfit tracking-tighter text-gradient group-hover:opacity-80 transition-opacity">NexusTrack</span>
+                    </a>
+                    <nav class="hidden md:flex items-center gap-6">
+                        <button class="nav-link text-sm font-medium text-slate-300 hover:text-white active"
+                            data-tab="home">Home</button>
+                        <button class="nav-link text-sm font-medium text-slate-300 hover:text-white"
+                            data-tab="watchlist">Watchlist</button>
+                        <button class="nav-link text-sm font-medium text-slate-300 hover:text-white"
+                            data-tab="watched">Watched</button>
+                        <button class="nav-link text-sm font-medium text-slate-300 hover:text-white"
+                            data-tab="stats">Stats</button>
+                    </nav>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <div class="relative hidden sm:block">
+                        <span
+                            class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+                        <input type="text" id="searchInput" placeholder="Search movies, TV, anime..."
+                            class="bg-white/5 border border-white/10 rounded-full py-2 pl-10 pr-10 text-sm w-48 lg:w-64 focus:w-80 focus:ring-2 focus:ring-accent outline-none transition-all duration-300 placeholder:text-slate-500">
+                        <button id="clearSearchBtn"
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white hidden">
+                            <span class="material-symbols-outlined text-lg">close</span>
+                        </button>
+                    </div>
+
+                    <button id="manualAddBtn"
+                        class="primary-btn text-white px-4 py-2 rounded-full text-xs font-bold shadow-lg">
+                        <span class="hidden sm:inline">➕ ADD MANUALLY</span>
+                        <span class="sm:hidden text-lg">➕</span>
+                    </button>
+
+                    <div
+                        class="w-9 h-9 rounded-full overflow-hidden border-2 border-accent/50 hover:border-accent transition-colors cursor-pointer">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Nexus" alt="User Profile"
+                            class="w-full h-full object-cover">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Mobile Navigation (Bottom) -->
+    <div
+        class="md:hidden fixed bottom-0 left-0 right-0 z-50 glass-card border-t border-white/10 py-2 flex justify-around">
+        <button class="nav-link-mobile flex flex-col items-center gap-1 text-slate-400" data-tab="home">
+            <span class="material-symbols-outlined">home</span>
+            <span class="text-[10px] font-bold">HOME</span>
+        </button>
+        <button class="nav-link-mobile flex flex-col items-center gap-1 text-slate-400" data-tab="watchlist">
+            <span class="material-symbols-outlined">list</span>
+            <span class="text-[10px] font-bold">WATCHLIST</span>
+        </button>
+        <button class="nav-link-mobile flex flex-col items-center gap-1 text-slate-400" data-tab="watched">
+            <span class="material-symbols-outlined">check_circle</span>
+            <span class="text-[10px] font-bold">WATCHED</span>
+        </button>
+        <button class="nav-link-mobile flex flex-col items-center gap-1 text-slate-400" data-tab="stats">
+            <span class="material-symbols-outlined">bar_chart</span>
+            <span class="text-[10px] font-bold">STATS</span>
+        </button>
+    </div>
+
+    <!-- Main Content -->
+    <main id="mainContent" class="pt-24 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <!-- Content will be injected here -->
+    </main>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed bottom-24 right-4 z-[100] flex flex-col gap-2 w-72"></div>
+
+    <!-- Scroll to Top -->
+    <button id="scrollToTopBtn"
+        class="fixed bottom-24 right-4 sm:bottom-8 sm:right-8 bg-accent text-white p-3 rounded-full shadow-2xl hidden hover:scale-110 transition-transform">
+        <span class="material-symbols-outlined">arrow_upward</span>
+    </button>
+
+    <!-- Scripts -->
+    <script>
+        // ───── CONFIG ─────
+        const TMDB_API_KEY = '3fd2be6f0c70a2a598f084ddfb75487c';
+        const TMDB_BASE = 'https://api.themoviedb.org/3';
+        const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
+        const JIKAN_BASE = 'https://api.jikan.moe/v4';
+
+        // ───── STATE ─────
+        let localList = JSON.parse(localStorage.getItem('nexustrack_data') || '[]');
+        const saveData = () => localStorage.setItem('nexustrack_data', JSON.stringify(localList));
+
+        let activeTab = 'home';
+        let searchQuery = '';
+        let homeCategory = 'all';
+        let homeGenre = 'all';
+        let homeCurrentPage = 1;
+        let isFetching = false;
+        let hasMore = true;
+
+        // ───── HELPERS ─────
+        const toast = (message, type = 'info') => {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const icon = type === 'success' ? 'check_circle' : type === 'error' ? 'error' : 'info';
+            const colors = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-accent';
+
+            toast.className = `toast glass-card ${colors}/20 border-${type === 'success' ? 'green' : type === 'error' ? 'red' : 'accent'}/50 text-white px-4 py-3 rounded-xl flex items-center gap-3 shadow-2xl`;
+            toast.innerHTML = `
+                <span class="material-symbols-outlined">${icon}</span>
+                <span class="text-sm font-semibold">${message}</span>
+            `;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-x-full');
+                toast.style.transition = 'all 0.5s ease';
+                setTimeout(() => toast.remove(), 500);
+            }, 3000);
+        };
+
+        const fetchTMDB = async (path, params = {}) => {
+            params.api_key = TMDB_API_KEY;
+            const qs = new URLSearchParams(params).toString();
+            try {
+                const res = await fetch(`${TMDB_BASE}${path}?${qs}`);
+                return await res.json();
+            } catch (e) {
+                console.error('TMDB Error:', e);
+                return null;
+            }
+        };
+
+        const fetchJikan = async (path, params = {}) => {
+            const qs = new URLSearchParams(params).toString();
+            try {
+                const res = await fetch(`${JIKAN_BASE}${path}?${qs}`);
+                return await res.json();
+            } catch (e) {
+                console.error('Jikan Error:', e);
+                return null;
+            }
+        };
+
+        // ───── UI COMPONENTS ─────
+        const renderSkeleton = () => `
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                ${Array(10).fill(0).map(() => `
+                    <div class="flex flex-col gap-3">
+                        <div class="skeleton aspect-[2/3] rounded-2xl w-full"></div>
+                        <div class="skeleton h-4 w-3/4 rounded"></div>
+                        <div class="skeleton h-3 w-1/2 rounded"></div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+        const renderCard = (item) => {
+            const title = item.title || item.name || item.title_english;
+            const poster = item.poster_path ? TMDB_IMAGE_BASE + item.poster_path :
+                (item.images?.jpg?.large_image_url || 'https://via.placeholder.com/500x750?text=No+Poster');
+            const rating = (item.vote_average || item.score || 0).toFixed(1);
+            const year = (item.release_date || item.first_air_date || item.aired?.from || '').substring(0, 4);
+            const category = item.media_type || (item.mal_id ? 'anime' : 'movie');
+
+            const inList = localList.find(l => l.sourceId === (item.id || item.mal_id) && l.category === category);
+            const statusLabel = inList ? (inList.status === 'watched' ? '✅ Watched' : '📋 Watchlist') : '';
+
+            return `
+                <div class="group card-hover glass-card rounded-2xl overflow-hidden cursor-pointer flex flex-col h-full" 
+                    onclick="showDetails('${category}', ${item.id || item.mal_id})">
+                    <div class="relative aspect-[2/3] overflow-hidden">
+                        <img src="${poster}" alt="${title}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4">
+                            <button class="primary-btn w-full py-2 rounded-xl text-xs font-bold" 
+                                onclick="event.stopPropagation(); quickAdd('${category}', ${item.id || item.mal_id})">
+                                ${inList ? 'IN LIST' : '+ WATCHLIST'}
+                            </button>
+                        </div>
+                        <div class="absolute top-2 right-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg flex items-center gap-1">
+                            <span class="material-symbols-outlined text-tertiary text-xs fill-current">star</span>
+                            <span class="text-white text-xs font-bold">${rating}</span>
+                        </div>
+                        ${statusLabel ? `<div class="absolute top-2 left-2 bg-accent/80 backdrop-blur-md px-2 py-1 rounded-lg text-[10px] font-bold text-white uppercase">${statusLabel}</div>` : ''}
+                    </div>
+                    <div class="p-4 flex flex-col flex-grow">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-[10px] font-bold text-slate-500 uppercase">${category}</span>
+                            <span class="text-[10px] font-bold text-slate-500">•</span>
+                            <span class="text-[10px] font-bold text-slate-500">${year || 'TBA'}</span>
+                        </div>
+                        <h3 class="font-semibold text-sm line-clamp-2 leading-tight group-hover:text-accent transition-colors">${title}</h3>
+                    </div>
+                </div>
+            `;
+        };
+
+        // ───── TABS ─────
+        const switchTab = (tab) => {
+            activeTab = tab;
+            const main = document.getElementById('mainContent');
+
+            // Update Nav UI
+            document.querySelectorAll('.nav-link, .nav-link-mobile').forEach(el => {
+                if (el.dataset.tab === tab) {
+                    el.classList.add('active', 'text-white');
+                    el.classList.remove('text-slate-300', 'text-slate-400');
+                } else {
+                    el.classList.remove('active', 'text-white');
+                    el.classList.add('text-slate-300', 'text-slate-400');
+                }
+            });
+
+            if (tab === 'home') renderHome();
+            else if (tab === 'watchlist') renderList('watchlist');
+            else if (tab === 'watched') renderList('watched');
+            else if (tab === 'stats') renderStats();
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        const renderHome = async () => {
+            const main = document.getElementById('mainContent');
+            main.innerHTML = `
+                <section id="heroSection" class="mb-12"></section>
+                <div class="flex items-center justify-between mb-8">
+                    <h2 class="text-2xl font-bold font-outfit">Recommended for You</h2>
+                    <div class="flex gap-2">
+                        <select id="homeCategorySelect" class="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs outline-none focus:ring-1 focus:ring-accent">
+                            <option value="all">All Categories</option>
+                            <option value="movie">Movies</option>
+                            <option value="tv">TV Series</option>
+                            <option value="anime">Anime</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="homeGrid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"></div>
+                <div id="loadMoreTrigger" class="h-20 flex items-center justify-center mt-8">
+                    <span class="material-symbols-outlined animate-spin text-accent">progress_activity</span>
+                </div>
+            `;
+
+            // Reset pagination
+            homeCurrentPage = 1;
+            hasMore = true;
+
+            // Fetch Hero
+            const trending = await fetchTMDB('/trending/all/day');
+            if (trending?.results?.[0]) {
+                const item = trending.results[0];
+                const heroEl = document.getElementById('heroSection');
+                heroEl.innerHTML = `
+                    <div class="relative w-full h-[450px] rounded-3xl overflow-hidden glass-card">
+                        <img src="https://image.tmdb.org/t/p/original${item.backdrop_path}" alt="${item.title || item.name}" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent flex flex-col justify-end p-8 md:p-12">
+                            <span class="bg-accent/20 text-accent text-[10px] font-bold px-2 py-1 rounded border border-accent/30 uppercase w-fit mb-4 tracking-widest">Trending Today</span>
+                            <h1 class="text-4xl md:text-6xl font-black font-outfit mb-4 leading-tight">${item.title || item.name}</h1>
+                            <p class="max-w-2xl text-slate-300 text-sm md:text-base line-clamp-3 mb-8">${item.overview}</p>
+                            <div class="flex gap-4">
+                                <button class="primary-btn px-8 py-3 rounded-2xl font-bold flex items-center gap-2" onclick="quickAdd('${item.media_type}', ${item.id})">
+                                    <span class="material-symbols-outlined">add</span> ADD TO LIST
+                                </button>
+                                <button class="bg-white/10 hover:bg-white/20 backdrop-blur-md px-8 py-3 rounded-2xl font-bold border border-white/10 transition-all" onclick="showDetails('${item.media_type}', ${item.id})">
+                                    DETAILS
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Initial Grid Load
+            loadHomeContent();
+
+            // Intersection Observer for Infinite Scroll
+            const observer = new IntersectionObserver((entries) => {
+                if (entries[0].isIntersecting && !isFetching && hasMore) {
+                    homeCurrentPage++;
+                    loadHomeContent();
+                }
+            }, { threshold: 0.1 });
+            observer.observe(document.getElementById('loadMoreTrigger'));
+
+            // Filter Change
+            document.getElementById('homeCategorySelect').addEventListener('change', (e) => {
+                homeCategory = e.target.value;
+                homeCurrentPage = 1;
+                document.getElementById('homeGrid').innerHTML = '';
+                loadHomeContent();
+            });
+        };
+
+        const loadHomeContent = async () => {
+            if (isFetching) return;
+            isFetching = true;
+
+            const grid = document.getElementById('homeGrid');
+            if (!grid) return;
+
+            let results = [];
+
+            try {
+                if (homeCategory === 'anime') {
+                    const data = await fetchJikan('/top/anime', { page: homeCurrentPage, limit: 20 });
+                    results = data?.data || [];
+                    hasMore = data?.pagination?.has_next_page;
+                } else if (homeCategory === 'all') {
+                    const data = await fetchTMDB('/trending/all/week', { page: homeCurrentPage });
+                    results = data?.results || [];
+                    hasMore = homeCurrentPage < data?.total_pages;
+                } else {
+                    const data = await fetchTMDB(`/discover/${homeCategory}`, { page: homeCurrentPage, sort_by: 'popularity.desc' });
+                    results = data?.results || [];
+                    hasMore = homeCurrentPage < data?.total_pages;
+                }
+
+                results.forEach(item => {
+                    grid.insertAdjacentHTML('beforeend', renderCard(item));
+                });
+            } catch (err) {
+                console.error(err);
+            } finally {
+                isFetching = false;
+                if (!hasMore) {
+                    document.getElementById('loadMoreTrigger').innerHTML = '<span class="text-slate-500 text-sm">You\'ve reached the end.</span>';
+                }
+            }
+        };
+
+        const renderList = (status) => {
+            const main = document.getElementById('mainContent');
+            let filtered = localList.filter(l => l.status === status);
+
+            if (searchQuery) {
+                filtered = filtered.filter(l => l.title.toLowerCase().includes(searchQuery.toLowerCase()));
+            }
+
+            main.innerHTML = `
+                <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+                    <div>
+                        <h1 class="text-4xl font-black font-outfit mb-2">${status === 'watchlist' ? 'Watchlist' : 'Watched Items'}</h1>
+                        <p class="text-slate-400 font-medium">${filtered.length} items in your ${status} collection</p>
+                    </div>
+                    <div class="flex gap-3">
+                        <select id="listCategoryFilter" class="glass-card bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-accent">
+                            <option value="all">All Categories</option>
+                            <option value="movie">Movies</option>
+                            <option value="tv">TV Series</option>
+                            <option value="anime">Anime</option>
+                        </select>
+                    </div>
+                </div>
+
+                ${filtered.length === 0 ? `
+                    <div class="text-center py-32 glass-card rounded-3xl">
+                        <span class="material-symbols-outlined text-6xl text-slate-600 mb-4">movie_filter</span>
+                        <h2 class="text-xl font-bold text-slate-400">Nothing found here yet.</h2>
+                        <button class="mt-6 text-accent font-bold hover:underline" onclick="switchTab('home')">Browse Content</button>
+                    </div>
+                ` : `
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                        ${filtered.map(item => `
+                            <div class="group card-hover glass-card rounded-2xl overflow-hidden flex flex-col h-full relative">
+                                <div class="relative aspect-[2/3] overflow-hidden">
+                                    <img src="${item.posterPath || 'https://via.placeholder.com/500x750?text=No+Poster'}" alt="${item.title}" class="w-full h-full object-cover">
+                                    <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-center items-center gap-3 p-4">
+                                        ${status === 'watchlist' ? `
+                                            <button class="primary-btn w-full py-2 rounded-xl text-xs font-bold" onclick="updateStatus('${item.id}', 'watched')">MARK WATCHED</button>
+                                        ` : `
+                                            <button class="bg-white/10 hover:bg-white/20 w-full py-2 rounded-xl text-xs font-bold" onclick="updateStatus('${item.id}', 'watchlist')">MOVE TO WATCHLIST</button>
+                                        `}
+                                        <button class="bg-red-500/20 hover:bg-red-500/40 text-red-400 w-full py-2 rounded-xl text-xs font-bold border border-red-500/30" onclick="removeItem('${item.id}')">REMOVE</button>
+                                    </div>
+                                </div>
+                                <div class="p-4 flex flex-col flex-grow">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="text-[10px] font-bold text-slate-500 uppercase">${item.category}</span>
+                                        ${item.score ? `<span class="text-[10px] font-bold text-accent">★ ${item.score}</span>` : ''}
+                                    </div>
+                                    <h3 class="font-semibold text-sm line-clamp-2 leading-tight">${item.title}</h3>
+                                    <p class="text-[10px] text-slate-500 mt-2">Added ${item.dateAdded}</p>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `}
+            `;
+
+            document.getElementById('listCategoryFilter').addEventListener('change', (e) => {
+                const val = e.target.value;
+                const items = main.querySelectorAll('.group');
+                items.forEach(it => {
+                    const cat = it.querySelector('.uppercase').textContent.toLowerCase();
+                    if (val === 'all' || cat === val) it.style.display = 'flex';
+                    else it.style.display = 'none';
+                });
+            });
+        };
+
+        const renderStats = () => {
+            const main = document.getElementById('mainContent');
+            const watched = localList.filter(l => l.status === 'watched');
+            const movies = watched.filter(l => l.category === 'movie').length;
+            const tv = watched.filter(l => l.category === 'tv').length;
+            const anime = watched.filter(l => l.category === 'anime').length;
+
+            const totalTime = watched.reduce((acc, curr) => {
+                if (curr.category === 'movie') return acc + (curr.runtime || 100);
+                if (curr.category === 'tv' || curr.category === 'anime') return acc + (curr.episodes || 12) * (curr.runtime || 24);
+                return acc;
+            }, 0);
+
+            const hours = Math.floor(totalTime / 60);
+            const days = (hours / 24).toFixed(1);
+
+            main.innerHTML = `
+                <h1 class="text-4xl font-black font-outfit mb-12">Your Journey</h1>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                    <div class="glass-card p-8 rounded-3xl border-l-4 border-accent">
+                        <p class="text-slate-400 text-sm font-bold uppercase tracking-widest mb-2">Total Time Spent</p>
+                        <h2 class="text-5xl font-black text-gradient">${hours} <span class="text-xl">Hrs</span></h2>
+                        <p class="text-slate-500 text-xs mt-2">Approximately ${days} days of entertainment</p>
+                    </div>
+                    <div class="glass-card p-8 rounded-3xl border-l-4 border-accent-orange">
+                        <p class="text-slate-400 text-sm font-bold uppercase tracking-widest mb-2">Completed Items</p>
+                        <h2 class="text-5xl font-black text-gradient">${watched.length} <span class="text-xl">Items</span></h2>
+                        <p class="text-slate-500 text-xs mt-2">${movies} Movies, ${tv} TV, ${anime} Anime</p>
+                    </div>
+                    <div class="glass-card p-8 rounded-3xl border-l-4 border-primary">
+                        <p class="text-slate-400 text-sm font-bold uppercase tracking-widest mb-2">Completion Rate</p>
+                        <h2 class="text-5xl font-black text-gradient">${localList.length ? Math.round((watched.length / localList.length) * 100) : 0}%</h2>
+                        <p class="text-slate-500 text-xs mt-2">${localList.length - watched.length} items still in watchlist</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="glass-card p-8 rounded-3xl">
+                        <h3 class="text-xl font-bold mb-6">Media Distribution</h3>
+                        <div class="space-y-6">
+                            <div>
+                                <div class="flex justify-between text-sm mb-2 font-bold">
+                                    <span>Movies</span>
+                                    <span>${movies}</span>
+                                </div>
+                                <div class="w-full h-3 bg-white/5 rounded-full overflow-hidden">
+                                    <div class="h-full bg-accent" style="width: ${watched.length ? (movies / watched.length) * 100 : 0}%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-sm mb-2 font-bold">
+                                    <span>TV Series</span>
+                                    <span>${tv}</span>
+                                </div>
+                                <div class="w-full h-3 bg-white/5 rounded-full overflow-hidden">
+                                    <div class="h-full bg-accent-orange" style="width: ${watched.length ? (tv / watched.length) * 100 : 0}%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-sm mb-2 font-bold">
+                                    <span>Anime</span>
+                                    <span>${anime}</span>
+                                </div>
+                                <div class="w-full h-3 bg-white/5 rounded-full overflow-hidden">
+                                    <div class="h-full bg-primary" style="width: ${watched.length ? (anime / watched.length) * 100 : 0}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-8 rounded-3xl flex flex-col justify-center items-center text-center">
+                        <span class="material-symbols-outlined text-6xl text-accent mb-4">workspace_premium</span>
+                        <h3 class="text-xl font-bold mb-2">Master Tracker Badge</h3>
+                        <p class="text-slate-400 text-sm max-w-xs">You've reached level ${Math.floor(watched.length / 5) + 1}! Watch more to unlock higher ranks.</p>
+                        <div class="mt-8 px-6 py-2 bg-accent/20 border border-accent/40 rounded-full text-accent font-bold text-xs uppercase tracking-widest">
+                            Elite Enthusiast
+                        </div>
+                    </div>
+                </div>
+            `;
+        };
+
+        // ───── ACTIONS ─────
+        const quickAdd = async (category, id) => {
+            if (localList.some(l => l.sourceId === id && l.category === category)) {
+                toast('Already in your list!', 'info');
+                return;
+            }
+
+            let details;
+            if (category === 'anime') {
+                const data = await fetchJikan(`/anime/${id}`);
+                details = data.data;
+            } else {
+                details = await fetchTMDB(`/${category}/${id}`);
+            }
+
+            if (!details) {
+                toast('Failed to fetch details.', 'error');
+                return;
+            }
+
+            const item = {
+                id: 'nx_' + Date.now(),
+                sourceId: id,
+                category: category,
+                title: details.title || details.name || details.title_english,
+                posterPath: details.poster_path ? TMDB_IMAGE_BASE + details.poster_path : (details.images?.jpg?.large_image_url || null),
+                score: details.vote_average || details.score || null,
+                runtime: details.runtime || (details.episode_run_time?.[0]) || 24,
+                episodes: details.number_of_episodes || details.episodes || 1,
+                status: 'watchlist',
+                dateAdded: new Date().toISOString().split('T')[0],
+                isFavorite: false
+            };
+
+            localList.push(item);
+            saveData();
+            toast('Added to Watchlist', 'success');
+
+            // Re-render if on a list page
+            if (activeTab === 'watchlist' || activeTab === 'watched') renderList(activeTab);
+        };
+
+        const updateStatus = (id, status) => {
+            const index = localList.findIndex(l => l.id === id);
+            if (index !== -1) {
+                localList[index].status = status;
+                saveData();
+                toast(`Moved to ${status}`, 'success');
+                renderList(activeTab);
+            }
+        };
+
+        const removeItem = (id) => {
+            if (confirm('Are you sure you want to remove this item?')) {
+                localList = localList.filter(l => l.id !== id);
+                saveData();
+                toast('Item removed', 'info');
+                renderList(activeTab);
+            }
+        };
+
+        const showDetails = async (category, id) => {
+            // Simplified details modal for now
+            toast('Details view coming soon!', 'info');
+        };
+
+        // ───── SEARCH ─────
+        let searchTimer;
+        const searchInput = document.getElementById('searchInput');
+        const clearBtn = document.getElementById('clearSearchBtn');
+
+        searchInput.addEventListener('input', (e) => {
+            searchQuery = e.target.value;
+            clearBtn.style.display = searchQuery ? 'block' : 'none';
+
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => {
+                if (activeTab === 'home') {
+                    document.getElementById('homeGrid').innerHTML = '';
+                    homeCurrentPage = 1;
+                    if (searchQuery) performSearch();
+                    else loadHomeContent();
+                } else {
+                    renderList(activeTab);
+                }
+            }, 500);
+        });
+
+        const performSearch = async () => {
+            if (!searchQuery) return;
+            const grid = document.getElementById('homeGrid');
+            grid.innerHTML = renderSkeleton();
+
+            const results = [];
+            const [movieRes, tvRes, animeRes] = await Promise.all([
+                fetchTMDB('/search/movie', { query: searchQuery }),
+                fetchTMDB('/search/tv', { query: searchQuery }),
+                fetchJikan('/anime', { q: searchQuery, limit: 10 })
+            ]);
+
+            if (movieRes?.results) results.push(...movieRes.results.map(r => ({ ...r, media_type: 'movie' })));
+            if (tvRes?.results) results.push(...tvRes.results.map(r => ({ ...r, media_type: 'tv' })));
+            if (animeRes?.data) results.push(...animeRes.data.map(r => ({ ...r, media_type: 'anime' })));
+
+            grid.innerHTML = '';
+            if (results.length === 0) {
+                grid.innerHTML = '<div class="col-span-full text-center py-20 text-slate-500">No results found for "' + searchQuery + '"</div>';
+            } else {
+                results.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+                results.forEach(item => grid.insertAdjacentHTML('beforeend', renderCard(item)));
+            }
+            hasMore = false; // Disable infinite scroll for search
+        };
+
+        clearBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            searchQuery = '';
+            clearBtn.style.display = 'none';
+            if (activeTab === 'home') {
+                homeCurrentPage = 1;
+                document.getElementById('homeGrid').innerHTML = '';
+                loadHomeContent();
+            } else {
+                renderList(activeTab);
+            }
+        });
+
+        // ───── MANUAL ADD ─────
+        document.getElementById('manualAddBtn').addEventListener('click', () => {
+            const title = prompt('Enter Title:');
+            if (!title) return;
+            const category = prompt('Category (movie, tv, anime):', 'movie').toLowerCase();
+
+            const item = {
+                id: 'nx_manual_' + Date.now(),
+                sourceId: null,
+                category: ['movie', 'tv', 'anime'].includes(category) ? category : 'movie',
+                title: title,
+                posterPath: null,
+                score: null,
+                runtime: 100,
+                episodes: 1,
+                status: 'watchlist',
+                dateAdded: new Date().toISOString().split('T')[0],
+                isFavorite: false
+            };
+
+            localList.push(item);
+            saveData();
+            toast('Manual entry added', 'success');
+            if (activeTab === 'watchlist') renderList('watchlist');
+        });
+
+        // ───── INITIALIZE ─────
+        document.addEventListener('DOMContentLoaded', () => {
+            switchTab('home');
+        });
+
+        // Scroll to Top
+        const scrollBtn = document.getElementById('scrollToTopBtn');
+        window.onscroll = () => {
+            if (document.body.scrollTop > 500 || document.documentElement.scrollTop > 500) {
+                scrollBtn.classList.remove('hidden');
+            } else {
+                scrollBtn.classList.add('hidden');
+            }
+        };
+        scrollBtn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Navigation Click Listeners
+        document.querySelectorAll('[data-tab]').forEach(btn => {
+            btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+        });
+
+    </script>
+</body>
+
+</html>
